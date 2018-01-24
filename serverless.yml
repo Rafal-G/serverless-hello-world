@@ -11,9 +11,32 @@ service: serverless-hello-world
 provider:
   name: aws
   runtime: nodejs6.10
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+      Resource:
+        - { "Fn::GetAtt": ["NamesDynamoDBTable", "Arn" ] }
+  environment:
+    NAMES_TABLE: { "Ref": "NamesDynamoDBTable" }
 
 # The `functions` block defines what code to deploy
 functions:
+  saveName:
+    handler: dao.saveName
+    events:
+      - http:
+          path: name
+          method: post
+          cors: true
+  getName:
+    handler: dao.getName
+    events:
+      - http:
+          path: name
+          method: get
+          cors: true
   helloWorld:
     handler: handler.helloWorld
     # The `events` block defines how to trigger the handler.helloWorld code
@@ -29,3 +52,20 @@ functions:
           path: hello-name
           method: get
           cors: true
+
+resources:
+  Resources:
+    NamesDynamoDBTable:
+      Type: 'AWS::DynamoDB::Table'
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: name
+            AttributeType: S
+        KeySchema:
+          -
+            AttributeName: name
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
